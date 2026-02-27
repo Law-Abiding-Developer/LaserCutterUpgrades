@@ -61,6 +61,7 @@ public class Plugin : BaseUnityPlugin
         };
         TechType prevSpeed = 0;
         TechType prevEnergy = 0;
+        
         for (int i = 0; i < 3; i++)
         {
             var info = PrefabInfo.WithTechType($"LaserSpeedUpgradeMk{i+1}", 

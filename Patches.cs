@@ -39,7 +39,7 @@ public class LaserCutterPatches
         {
             GameObject gameObject = null;
             Vector3 vector = Vector3.zero;
-            UWE.Utils.TraceFPSTargetPosition(Player.main.gameObject, 3.5f, 
+            UWE.Utils.TraceFPSTargetPosition(Player.main.gameObject, 3.0f, 
                 ref gameObject, ref vector);
             if (gameObject)
             {
@@ -49,11 +49,10 @@ public class LaserCutterPatches
                     if (_timers[__instance][1] >= 0.1f)
                     {
                         _timers[__instance][1] = 0f;
-                        var entityRoot = UWE.Utils.GetEntityRoot(gameObject) ?? gameObject;
-                        entityRoot?.GetComponentInChildren<Drillable>()?.OnDrill(vector, null, out var _);
+                        drillable.OnDrill(vector, null, out _);
                     }
 
-                    __instance.energyMixin.ConsumeEnergy(Time.deltaTime);
+                    __instance.energyMixin.ConsumeEnergy(Time.deltaTime/1.5f);
                 }
             }
         }
@@ -91,5 +90,44 @@ public class DrillablePatches
             __instance.secondaryTooltip, true);
         HandReticle.main.SetIcon(HandReticle.IconType.Drill);
 
+    }
+
+    [HarmonyPatch(nameof(Drillable.ManagedUpdate)), HarmonyPostfix]
+    public static void ManagedUpdatePostfix(Drillable __instance)
+    {
+        if (Inventory.main.GetHeldTool() is not LaserCutter cutter) return;
+        var removeList = new List<GameObject>();
+        foreach (var lootPinataObject in __instance.lootPinataObjects)
+        {
+            if (lootPinataObject == null)
+            {
+                removeList.Add(lootPinataObject);
+                continue;
+            }
+
+            var player = cutter.transform.position + Vector3.up * 0.8f;
+            lootPinataObject.transform.position = Vector3.Lerp(lootPinataObject.transform.position, player, Time.deltaTime*5f);
+            if (Vector3.Distance(lootPinataObject.transform.position, player) > 1f) continue;
+            
+            var pickupable  = lootPinataObject.GetComponentInChildren<Pickupable>();
+            if (!pickupable) continue;
+            
+            if (!Inventory.main.HasRoomFor(pickupable))
+            {
+                ErrorMessage.AddMessage(Language.main.Get("InventoryFull"));
+                removeList.Add(lootPinataObject);
+                continue;
+            }
+            uGUI_IconNotifier.main.Play(pickupable.GetTechType(), uGUI_IconNotifier.AnimationType.From);
+            pickupable.Initialize();
+            Inventory.main.container.UnsafeAdd(new InventoryItem(pickupable));
+            pickupable.PlayPickupSound();
+            removeList.Add(lootPinataObject);
+        }
+
+        if (removeList.Count <= 0)
+            return;
+        foreach (var gameObject in removeList)
+            __instance.lootPinataObjects.Remove(gameObject);
     }
 }
