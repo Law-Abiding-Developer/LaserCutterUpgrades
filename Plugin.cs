@@ -17,19 +17,19 @@ public class Plugin : BaseUnityPlugin
 {
     public new static ManualLogSource Logger { get; private set; }
 
-    private static Assembly Assembly { get; } = System.Reflection.Assembly.GetExecutingAssembly();
+    private static Assembly Assembly { get; } = Assembly.GetExecutingAssembly();
     
-    public static GameInput.Button OpenUpgradesButton = EnumHandler.AddEntry<GameInput.Button>("OpenLCUpgrades")
+    public static readonly GameInput.Button OpenUpgradesButton = EnumHandler.AddEntry<GameInput.Button>("OpenLCUpgrades")
         .CreateInput("Open LaserCutter Upgrades")
         .WithKeyboardBinding(GameInputHandler.Paths.Keyboard.B)
         .WithCategory("Tools Upgrades");
 
-    public static TechCategory LaserCutterUpgrades = EnumHandler.AddEntry<TechCategory>("LaserCutterUpgrades").WithPdaInfo("Laser Cutter Upgrades").RegisterToTechGroup(UpgradesLIB.Plugin.toolupgrademodules);
+    public static readonly TechCategory LaserCutterUpgrades = EnumHandler.AddEntry<TechCategory>("LaserCutterUpgrades").WithPdaInfo("Laser Cutter Upgrades").RegisterToTechGroup(UpgradesLIB.Plugin.toolupgrademodules);
         
     public static EquipmentType EquipmentType = EquipmentType.None;
     public const string StorageName = "LaserCutterContainer";
     public const string StorageClassID = "LaserCutterContainerClassID";
-    public static Dictionary<TechType, float> Multipliers = new();
+    public static readonly Dictionary<TechType, float> Multipliers = new();
 
     private void Awake()
     {

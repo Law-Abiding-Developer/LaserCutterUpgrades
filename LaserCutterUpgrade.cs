@@ -9,24 +9,22 @@ namespace LaserCutterUpgrades;
 
 public class LaserCutterUpgrade
 {
-    public PrefabInfo Info { get; set; }
-    public TechType TechType { get; set; }
-    public string ClassID { get; set; }
+    private PrefabInfo Info { get; set; }
 
     public LaserCutterUpgrade(PrefabInfo info)
     {
         Info = info;
-        TechType = info.TechType;
-        ClassID = info.ClassID;
     }
 
     public void Register(List<Ingredient> ingredients)
     {
         var prefab = new CustomPrefab(Info);
-        var clone = new CloneTemplate(Info, TechType.CyclopsShieldModule);
-        clone.ModifyPrefab = obj =>
+        var clone = new CloneTemplate(Info, TechType.CyclopsShieldModule)
         {
-            obj.transform.localScale /= 1.5f;
+            ModifyPrefab = obj =>
+            {
+                obj.transform.localScale /= 1.5f;
+            }
         };
         prefab.SetGameObject(clone);
         prefab.SetRecipe(new RecipeData(ingredients))
@@ -37,6 +35,6 @@ public class LaserCutterUpgrade
         prefab.SetEquipment(Plugin.EquipmentType);
         prefab.SetPdaGroupCategory(UpgradesLIB.Plugin.toolupgrademodules, Plugin.LaserCutterUpgrades);
         prefab.Register();
-        Plugin.Logger.LogInfo($"Prefab {TechType} has been registered!");
+        Plugin.Logger.LogInfo($"Prefab {Info.TechType} has been registered!");
     }
 }

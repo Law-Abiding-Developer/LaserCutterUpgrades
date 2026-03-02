@@ -1,14 +1,15 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 using UpgradesLIB;
 
 namespace LaserCutterUpgrades;
 
 public class LaserCutterUpgradeInput : ModdedUpgradeConsoleInput
 {
-    private List<float> _highestSpeedMultiplier = new();
-    private List<float> _highestEnergyMultiplier = new();
-    private bool _enableDrillPatch = false;
+    private readonly List<float> _highestSpeedMultiplier = new();
+    private readonly List<float> _highestEnergyMultiplier = new();
+    private bool _enableDrillPatch;
     
     public override void InitializeEquipment()
     {
@@ -23,38 +24,48 @@ public class LaserCutterUpgradeInput : ModdedUpgradeConsoleInput
     {
         if (!Plugin.Multipliers.TryGetValue(item.techType, out float value)) return;
         
-        if (value > 100 && value < 200)
+        if (value is > 100 and < 200)
         {
-            if (value > _highestSpeedMultiplier[0]) _highestSpeedMultiplier[0] = value-100;
-            else _highestSpeedMultiplier.Add(value-100);
-            _highestSpeedMultiplier.Sort();
+            _highestSpeedMultiplier.Add(value-100);
+            _highestSpeedMultiplier.Sort((x, y) => y.CompareTo(x));
         }
 
         if (value > 200)
         {
-            if (value > _highestEnergyMultiplier[0]) _highestEnergyMultiplier[0] = value-200;
-            else _highestEnergyMultiplier.Add(value-200);
-            _highestEnergyMultiplier.Sort();
+            _highestEnergyMultiplier.Add(value-200);
+            _highestEnergyMultiplier.Sort((x, y) => y.CompareTo(x));
         }
-        if (value == 6767) _enableDrillPatch = true;
+        if (Mathf.Approximately(value, 6767)) _enableDrillPatch = true;
+    }
+
+    private float _timer = 0;
+    public void Update()
+    {
+        if (_timer >= 30)
+        {
+            _highestEnergyMultiplier.Sort((x, y) => y.CompareTo(x));
+            _highestSpeedMultiplier.Sort((x, y) => y.CompareTo(x));
+            _timer = 0;
+        }
+        _timer += Time.deltaTime;
     }
 
     public void OnRemoveItem(InventoryItem item)
     {
         if (!Plugin.Multipliers.TryGetValue(item.techType, out float value)) return;
         
-        if (value > 100 && value < 200)
+        if (value is > 100 and < 200)
         {
             _highestSpeedMultiplier.Remove(value-100);
-            _highestSpeedMultiplier.Sort();
+            _highestSpeedMultiplier.Sort((x, y) => y.CompareTo(x));
         }
 
         if (value > 200)
         {
             _highestEnergyMultiplier.Remove(value-200);
-            _highestEnergyMultiplier.Sort();
+            _highestEnergyMultiplier.Sort((x, y) => y.CompareTo(x));
         }
-        if (value == 6767) _enableDrillPatch = true;
+        if (Mathf.Approximately(value, 6767)) _enableDrillPatch = false;
     }
     
     public float GetHighestSpeedMultiplier()
@@ -70,5 +81,13 @@ public class LaserCutterUpgradeInput : ModdedUpgradeConsoleInput
     public bool EnableDrillPatch()
     {
         return _enableDrillPatch;
+    }
+
+    public static float GetEnergyConsumption(LaserCutter instance)
+    {
+        const float consumption = 0.18f;
+        var panel = Utilities.GetPanel<LaserCutterUpgradeInput>(instance.gameObject, 
+            Plugin.StorageName,Plugin.StorageClassID);
+        return panel == null ? consumption : consumption / panel.GetHighestEnergyMultiplier();
     }
 }
