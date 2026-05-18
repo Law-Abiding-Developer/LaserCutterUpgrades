@@ -1,10 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
 using Nautilus.Assets;
 using Nautilus.Handlers;
+using UnityEngine;
 using UpgradesLIB;
 using UpgradesLIB.Items.Equipment;
 
@@ -45,14 +47,34 @@ public class Plugin : BaseUnityPlugin
         
         Harmony.CreateAndPatchAll(Assembly, $"{PluginInfo.PLUGIN_GUID}");
         
+        ConsoleCommandsHandler.RegisterConsoleCommand<DebugCuttingBehavior>("debugcuttingbehavior", () =>
+        {
+            DevConsole.SendConsoleCommand("survival");
+            DevConsole.SendConsoleCommand("oxygen");
+            DevConsole.SendConsoleCommand("clearinventory");
+            DevConsole.SendConsoleCommand("item lasercutter");
+            DevConsole.SendConsoleCommand("item " + TechType.StasisRifle);
+            DevConsole.SendConsoleCommand("item " + TechType.PropulsionCannon);
+            DevConsole.SendConsoleCommand("item seaglide");
+            DevConsole.SendConsoleCommand("goto wreck14");
+            DevConsole.instance.StartCoroutine(SpawnLead());
+            foreach (var key in Multipliers.Keys)
+            {
+                DevConsole.SendConsoleCommand("item " + key);
+            }
+            DevConsole.SendConsoleCommand("item battery 5");
+        });
+        
         InitializePrefabs();
         Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_NAME} is loaded!");
     }
 
+    private delegate void DebugCuttingBehavior();
+
     public void InitializePrefabs()
     {
         EquipmentType = Utilities.ClaimEquipmentTypes(this)[0];
-        var currentMultiplier = 2f;
+        var currentMultiplier = 1f;
         List<Ingredient>[] ingredients = { new(){new(TechType.Battery, 1), 
                 new(TechType.WiringKit, 1)}, 
             new(){new (TechType.Lubricant, 1), new(TechType.WiringKit, 1)},
@@ -64,10 +86,11 @@ public class Plugin : BaseUnityPlugin
         
         for (int i = 0; i < 3; i++)
         {
+            currentMultiplier += i + 1;
             var info = PrefabInfo.WithTechType($"LaserSpeedUpgradeMk{i+1}", 
                     $"Laser Cutter Speed Upgrade Mk {i+1}", $"Mk {i+1}"
                     + $" speed upgrade for the Laser Cutter. Decreases the cutting speed by " +
-                    $"{currentMultiplier}x")
+                    $"{currentMultiplier}x.")
                 .WithIcon(SpriteManager.Get(TechType.LaserCutter));
             Multipliers.Add(info.TechType, 100+currentMultiplier);
             
@@ -92,7 +115,6 @@ public class Plugin : BaseUnityPlugin
             new LaserCutterUpgrade(info).Register(energyIngredients);
             
             prevEnergy = info.TechType;
-            currentMultiplier += i + 1;
         }
 
         var drillableInfo = PrefabInfo.WithTechType("LaserCutterDrillUpgrade",
@@ -107,5 +129,30 @@ public class Plugin : BaseUnityPlugin
                 new(TechType.Aerogel, 2), new(TechType.AdvancedWiringKit, 2),
                 new(TechType.AramidFibers, 2), new(TechType.PlasteelIngot, 1)
             });
+    }
+
+    public static IEnumerator SpawnLead()
+    {
+        //goto wreck14 warps to -416, -98, -261
+        
+        var request = CraftData.GetPrefabForTechTypeAsync(TechType.DrillableLead);
+        yield return request;
+        var prefab = request.GetResult();
+        Instantiate(prefab, new Vector3(-416,-98,-255), Quaternion.identity);
+        
+        request = CraftData.GetPrefabForTechTypeAsync(TechType.DrillableAluminiumOxide);
+        yield return request;
+        prefab = request.GetResult();
+        Instantiate(prefab, new Vector3(-411,-98,-261), Quaternion.identity);
+        
+        request = CraftData.GetPrefabForTechTypeAsync(TechType.DrillableCopper);
+        yield return request;
+        prefab = request.GetResult();
+        Instantiate(prefab, new Vector3(-410,-98,-255), Quaternion.identity);
+        
+        request = CraftData.GetPrefabForTechTypeAsync(TechType.DrillableDiamond);
+        yield return request;
+        prefab = request.GetResult();
+        Instantiate(prefab, new Vector3(-416,-103,-261), Quaternion.identity);
     }
 }

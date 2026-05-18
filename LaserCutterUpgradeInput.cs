@@ -29,13 +29,12 @@ public class LaserCutterUpgradeInput : ModdedUpgradeConsoleInput
             _highestSpeedMultiplier.Add(value-100);
             _highestSpeedMultiplier.Sort((x, y) => y.CompareTo(x));
         }
-
-        if (value > 200)
+        else if (Mathf.Approximately(value, 6767)) _enableDrillPatch = true;
+        else if (value > 200)
         {
             _highestEnergyMultiplier.Add(value-200);
             _highestEnergyMultiplier.Sort((x, y) => y.CompareTo(x));
         }
-        if (Mathf.Approximately(value, 6767)) _enableDrillPatch = true;
     }
 
     private float _timer = 0;
@@ -59,13 +58,12 @@ public class LaserCutterUpgradeInput : ModdedUpgradeConsoleInput
             _highestSpeedMultiplier.Remove(value-100);
             _highestSpeedMultiplier.Sort((x, y) => y.CompareTo(x));
         }
-
-        if (value > 200)
+        else if (Mathf.Approximately(value, 6767)) _enableDrillPatch = false;
+        else if (value > 200)
         {
             _highestEnergyMultiplier.Remove(value-200);
             _highestEnergyMultiplier.Sort((x, y) => y.CompareTo(x));
         }
-        if (Mathf.Approximately(value, 6767)) _enableDrillPatch = false;
     }
     
     public float GetHighestSpeedMultiplier()
@@ -81,13 +79,5 @@ public class LaserCutterUpgradeInput : ModdedUpgradeConsoleInput
     public bool EnableDrillPatch()
     {
         return _enableDrillPatch;
-    }
-
-    public static float GetEnergyConsumption(LaserCutter instance)
-    {
-        const float consumption = 0.18f;
-        var panel = Utilities.GetPanel<LaserCutterUpgradeInput>(instance.gameObject, 
-            Plugin.StorageName,Plugin.StorageClassID);
-        return panel == null ? consumption : consumption / panel.GetHighestEnergyMultiplier();
     }
 }

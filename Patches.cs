@@ -8,7 +8,7 @@ namespace LaserCutterUpgrades;
 [HarmonyPatch(typeof(LaserCutter))]
 public class LaserCutterPatches
 {
-    public static readonly Dictionary<LaserCutter, float> Timers = new();
+    private static readonly Dictionary<LaserCutter, float[]> Timers = new();
     [HarmonyPatch(nameof(LaserCutter.OnToolUseAnim)), HarmonyPrefix]
     // ReSharper disable InconsistentNaming
     public static bool OnToolUseAnimPrefix(LaserCutter __instance)
@@ -20,43 +20,47 @@ public class LaserCutterPatches
     public static void UpdatePostfix(LaserCutter __instance)
     {
         if (__instance == null) return;
-        if (!Timers.ContainsKey(__instance)) Timers.Add(__instance, 0f);
-        if (__instance.usedThisFrame) Timers[__instance] += Time.deltaTime;
+        if (!Timers.ContainsKey(__instance)) Timers.Add(__instance, new[] { 0f, 0 });
+        if (__instance.usedThisFrame) Timers[__instance][0] += Time.deltaTime;
 
         var panel = Utilities.GetPanel<LaserCutterUpgradeInput>(__instance.gameObject,
             Plugin.StorageName, Plugin.StorageClassID);
         if (panel == null) return;
         
+        if (__instance.usedThisFrame && panel.EnableDrillPatch())
+            Timers[__instance][1] += Time.deltaTime;
+        
         var highestSpeedMultiplier = panel.GetHighestSpeedMultiplier();
         var timeToWeld = 0.18f / highestSpeedMultiplier;
 
-        if (__instance.usedThisFrame && Timers[__instance] >= timeToWeld)
+        if (__instance.usedThisFrame && Timers[__instance][0] >= timeToWeld)
         {
             __instance.LaserCut();
-            Timers[__instance] = 0;
+            Timers[__instance][0] = 0;
         }
 
         if (panel.EnableDrillPatch())
         {
             GameObject gameObject = null;
             var vector = Vector3.zero;
+            
+            //UWE's Hitscan method
             UWE.Utils.TraceFPSTargetPosition(Player.main.gameObject, 3.0f,
                 ref gameObject, ref vector);
             
             if (gameObject)
             {
                 var drillable = gameObject.GetComponentInParent<Drillable>();
-                if (drillable)
+                if (drillable && __instance.usedThisFrame && !__instance.energyMixin.IsDepleted())
                 {
-                    var timeToDrill = drillable.timeLastDrilled + 0.1f / highestSpeedMultiplier;
-                    if (Time.time >= timeToDrill && __instance.usedThisFrame)
+                    var timeToDrill = 0.1f;
+                    if (Timers[__instance][1] >= timeToDrill)
                     {
-                        drillable.timeLastDrilled = timeToDrill;
+                        Timers[__instance][1] = 0f;
                         drillable.OnDrill(vector, null, out _);
+                        var energyToConsume = 0.0975f/panel.GetHighestEnergyMultiplier();
+                        __instance.energyMixin.ConsumeEnergy(energyToConsume);
                     }
-
-                    var energyToConsume = (Time.deltaTime / 1.5f)/panel.GetHighestEnergyMultiplier();
-                    __instance.energyMixin.ConsumeEnergy(energyToConsume);
                 }
             }
         }
@@ -72,15 +76,15 @@ public class LaserCutterPatches
         var panel = Utilities.GetPanel<LaserCutterUpgradeInput>(__instance.gameObject, 
             Plugin.StorageName, Plugin.StorageClassID);
         if (panel == null) return;
-        __instance.laserEnergyCost = (0.18f/8)
-                                     /panel.GetHighestEnergyMultiplier();
-        __instance.healthPerWeld = 1f;
+        var speed = panel.GetHighestSpeedMultiplier();
+        __instance.laserEnergyCost = 0.18f*speed/(3*panel.GetHighestEnergyMultiplier());
+        __instance.healthPerWeld = 4.5f;
     }
-
+    
     [HarmonyPatch(nameof(LaserCutter.RandomizeIntensity)), HarmonyPostfix]
     public static void RandomizeIntensityPostfix(LaserCutter __instance)
     {
-        __instance.lightIntensity /= 2f;
+        __instance.lightIntensity /= 4f;
     }
 }
 
