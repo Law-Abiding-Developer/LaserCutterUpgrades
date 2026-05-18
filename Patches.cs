@@ -53,6 +53,7 @@ public class LaserCutterPatches
                 var drillable = gameObject.GetComponentInParent<Drillable>();
                 if (drillable && __instance.usedThisFrame && !__instance.energyMixin.IsDepleted())
                 {
+                    if (!__instance.fxIsPlaying) __instance.StartLaserCuttingFX();
                     var timeToDrill = 0.1f;
                     if (Timers[__instance][1] >= timeToDrill)
                     {
@@ -61,6 +62,10 @@ public class LaserCutterPatches
                         var energyToConsume = 0.0975f/panel.GetHighestEnergyMultiplier();
                         __instance.energyMixin.ConsumeEnergy(energyToConsume);
                     }
+                }
+                else
+                {
+                    __instance.StopLaserCuttingFX();
                 }
             }
         }
